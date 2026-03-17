@@ -1,8 +1,13 @@
 package com.healthbooking.config;
 
-import jakarta.ws.rs.ApplicationPath;
-import jakarta.ws.rs.core.Application;
+import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
+import org.eclipse.microprofile.openapi.annotations.info.Info;
 
-@ApplicationPath("/api/v1")
-public class OpenApiConfig extends Application {
+@OpenAPIDefinition(
+        info = @Info(
+                title = "Health Booking API",
+                version = "1.0.0"
+        )
+)
+public class OpenApiConfig {
 }
