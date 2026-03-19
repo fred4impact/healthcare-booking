@@ -1,0 +1,50 @@
+replicaCount:
+  backend: 1
+  frontend: 1
+
+image:
+  backend:
+    repository: healthcare-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  frontend:
+    repository: healthcare-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+db:
+  # Supported: mysql, postgresql
+  type: mysql
+  mysql:
+    servicePort: 3306
+    dbName: booking
+    user: booking
+    password: booking
+    rootPassword: booking_root
+    storage: 5Gi
+  postgresql:
+    servicePort: 5432
+    dbName: booking
+    user: booking
+    password: booking
+    storage: 5Gi
+
+backend:
+  servicePort: 8080
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  host: healthcare.local
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    # kube-prometheus-stack operator commonly filters by this label
+    releaseLabel: monitoring
+    interval: 15s
+
+namespace:
+  create: true
+

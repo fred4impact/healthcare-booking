@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthcare-frontend
+  namespace: healthcare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: healthcare-frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: healthcare-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: healthcare-frontend:latest
+          ports:
+            - name: http
+              containerPort: 80
+

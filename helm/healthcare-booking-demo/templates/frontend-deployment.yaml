@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "healthcare-booking-demo.frontendServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.frontend }}
+  selector:
+    matchLabels:
+      {{- include "healthcare-booking-demo.frontendPodLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "healthcare-booking-demo.frontendPodLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ .Values.image.frontend.repository }}:{{ .Values.image.frontend.tag }}"
+          ports:
+            - name: http
+              containerPort: 80
+

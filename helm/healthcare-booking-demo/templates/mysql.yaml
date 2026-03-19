@@ -1,0 +1,87 @@
+{{- if eq .Values.db.type "mysql" }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "healthcare-booking-demo.mysqlServiceName" . }}-secret
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  db: {{ .Values.db.mysql.dbName }}
+  user: {{ .Values.db.mysql.user }}
+  password: {{ .Values.db.mysql.password }}
+  rootPassword: {{ .Values.db.mysql.rootPassword }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "healthcare-booking-demo.mysqlServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    {{- include "healthcare-booking-demo.mysqlPodLabels" . | nindent 4 }}
+  ports:
+    - name: mysql
+      port: {{ .Values.db.mysql.servicePort }}
+      targetPort: {{ .Values.db.mysql.servicePort }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "healthcare-booking-demo.mysqlServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  serviceName: {{ include "healthcare-booking-demo.mysqlServiceName" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "healthcare-booking-demo.mysqlPodLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "healthcare-booking-demo.mysqlPodLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - name: mysql
+              containerPort: {{ .Values.db.mysql.servicePort }}
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "healthcare-booking-demo.mysqlServiceName" . }}-secret
+                  key: db
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "healthcare-booking-demo.mysqlServiceName" . }}-secret
+                  key: user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "healthcare-booking-demo.mysqlServiceName" . }}-secret
+                  key: password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "healthcare-booking-demo.mysqlServiceName" . }}-secret
+                  key: rootPassword
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.db.mysql.servicePort }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.db.mysql.storage }}
+{{- end }}
+

@@ -1,0 +1,81 @@
+{{- if eq .Values.db.type "postgresql" }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "healthcare-booking-demo.postgresServiceName" . }}-secret
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  db: {{ .Values.db.postgresql.dbName }}
+  user: {{ .Values.db.postgresql.user }}
+  password: {{ .Values.db.postgresql.password }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "healthcare-booking-demo.postgresServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    {{- include "healthcare-booking-demo.postgresPodLabels" . | nindent 4 }}
+  ports:
+    - name: postgres
+      port: {{ .Values.db.postgresql.servicePort }}
+      targetPort: {{ .Values.db.postgresql.servicePort }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "healthcare-booking-demo.postgresServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  serviceName: {{ include "healthcare-booking-demo.postgresServiceName" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "healthcare-booking-demo.postgresPodLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "healthcare-booking-demo.postgresPodLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - name: postgres
+              containerPort: {{ .Values.db.postgresql.servicePort }}
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "healthcare-booking-demo.postgresServiceName" . }}-secret
+                  key: db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "healthcare-booking-demo.postgresServiceName" . }}-secret
+                  key: user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "healthcare-booking-demo.postgresServiceName" . }}-secret
+                  key: password
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.db.postgresql.servicePort }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.db.postgresql.storage }}
+{{- end }}
+

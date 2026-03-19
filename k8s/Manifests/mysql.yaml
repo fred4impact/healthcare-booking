@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: healthcare-mysql-secret
+  namespace: healthcare
+type: Opaque
+stringData:
+  db: booking
+  user: booking
+  password: booking
+  rootPassword: booking_root
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthcare-mysql
+  namespace: healthcare
+spec:
+  selector:
+    app.kubernetes.io/name: healthcare-mysql
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: healthcare-mysql
+  namespace: healthcare
+spec:
+  serviceName: healthcare-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: healthcare-mysql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: healthcare-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: healthcare-mysql-secret
+                  key: db
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: healthcare-mysql-secret
+                  key: user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: healthcare-mysql-secret
+                  key: password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: healthcare-mysql-secret
+                  key: rootPassword
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+
